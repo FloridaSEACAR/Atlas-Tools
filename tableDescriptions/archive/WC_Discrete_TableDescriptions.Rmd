@@ -28,7 +28,7 @@ checkWCTrends <- function(p, SennSlope){
 }
 
 # Import discrete SKT results
-disc <- fread("../../../SEACAR_Trend_Analyses/WQ_Cont_Discrete/output/WQ_Discrete_All_KendallTau_Stats.txt") %>% distinct()
+disc <- fread("../../SEACAR_Trend_Analyses/WQ_Cont_Discrete/output/WQ_Discrete_All_KendallTau_Stats.txt") %>% distinct()
 
 # Create Period of Record column
 disc <- disc[, `:=` (Period = paste0(EarliestYear, " - ", LatestYear))]
@@ -40,7 +40,7 @@ disc <- disc[Website==1, ] %>% rowwise() %>%
   ) %>% as.data.table()
 
 # Import WebsiteParameters.csv
-websiteParams <- fread("data/WebsiteParameters.csv")
+websiteParams <- SEACAR::WebsiteParameters
 
 ```
 

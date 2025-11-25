@@ -15,7 +15,7 @@ library(openxlsx)
 
 knitr::opts_chunk$set(warning = FALSE, echo = FALSE, message = FALSE)
 
-sav_lme <- fread("../../../SEACAR_Trend_Analyses/SAV/output/website/SAV_BBpct_LMEresults_All.txt") %>% distinct()
+sav_lme <- fread("../../SEACAR_Trend_Analyses/SAV/output/website/SAV_BBpct_LMEresults_All.txt") %>% distinct()
 
 # Re-create "Period" column
 sav_lme <- sav_lme[, `:=` (Period = paste0(EarliestYear, " - ", LatestYear))]

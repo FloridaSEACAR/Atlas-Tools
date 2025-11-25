@@ -17,13 +17,13 @@ library(english)
 knitr::opts_chunk$set(warning = FALSE, echo = FALSE, message = FALSE)
 
 # Import oyster overall stats
-oyster <- fread("../../../SEACAR_Trend_Analyses/Oyster/output/Oyster_All_GLMM_Stats.txt") %>% distinct()
+oyster <- fread("../../SEACAR_Trend_Analyses/Oyster/output/ManagedAreaName/Oyster_All_GLMM_Stats.txt") %>% distinct()
 
 # Create Period of Record column
 # oyster <- oyster[, `:=` (Period = paste0(EarliestYear, " - ", LatestYear))]
 
 # Import WebsiteParameters.csv
-websiteParams <- fread("data/WebsiteParameters.csv")
+websiteParams <- SEACAR::WebsiteParameters
 ```
 
 ```{r, wc_oyster_trend_templates}

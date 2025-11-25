@@ -17,13 +17,13 @@ library(english)
 knitr::opts_chunk$set(warning = FALSE, echo = FALSE, message = FALSE)
 
 # Import CW overall stats
-cw <- fread("../../../SEACAR_Trend_Analyses/Coastal_Wetlands/output/CoastalWetlands_SpeciesRichness_MA_Overall_Stats.txt") %>% distinct()
+cw <- fread("../../SEACAR_Trend_Analyses/Coastal_Wetlands/output/CoastalWetlands_SpeciesRichness_MA_Overall_Stats.txt") %>% distinct()
 
 # Create Period of Record column
 # cw <- cw[, `:=` (Period = paste0(EarliestYear, " - ", LatestYear))]
 
 # Import WebsiteParameters.csv
-websiteParams <- fread("data/WebsiteParameters.csv")
+websiteParams <- SEACAR::WebsiteParameters
 
 ```
 

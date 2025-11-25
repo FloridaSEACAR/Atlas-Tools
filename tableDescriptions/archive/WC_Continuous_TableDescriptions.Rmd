@@ -28,7 +28,7 @@ checkWCTrends <- function(p, SennSlope){
 }
 
 # Import continuous SKT results
-cont <- fread("../../../SEACAR_Trend_Analyses/WQ_Cont_Discrete/output/WQ_Continuous_All_KendallTau_Stats.txt") %>% distinct()
+cont <- fread("../../SEACAR_Trend_Analyses/WQ_Cont_Discrete/output/WQ_Continuous_All_KendallTau_Stats.txt") %>% distinct()
 
 # Create Period of Record column
 cont <- cont[, `:=` (Period = paste0(EarliestYear, " - ", LatestYear))]
@@ -39,7 +39,7 @@ cont <- cont[Website==1, ] %>% rowwise() %>%
     StatisticalTrend = ifelse(!is.na(Trend), checkWCTrends(p, SennSlope), "Insufficient data")
   ) %>% as.data.table()
 
-websiteParams <- fread("data/WebsiteParameters.csv")
+websiteParams <- SEACAR::WebsiteParameters
 # Correct order of websiteParams to match format from the Atlas
 websiteParams <- websiteParams %>% 
   arrange(factor(IndicatorName, levels = c("Nutrients","Water Quality","Water Clarity")),
@@ -49,7 +49,7 @@ websiteParams <- websiteParams %>%
                                            "Chlorophyll a, Corrected for Pheophytin", "Secchi Depth", "Colored Dissolved Organic Matter"))) %>%
   filter(Website==1)
 setDT(websiteParams)
-
+setkey(websiteParams)
 ```
 
 ```{r, wc_continuous_trend_templates}
@@ -230,6 +230,7 @@ for(ma in unique(cont$ManagedAreaName)){
   filtered_cont <- cont[ManagedAreaName==ma, ]
   descriptions <- list()
   for(parameter in unique(filtered_cont$ParameterName)){
+    print(parameter)
     indicator <- websiteParams[ParameterName==parameter, unique(IndicatorName)]
     cat("  \n")
     cat(glue("## {parameter}"))

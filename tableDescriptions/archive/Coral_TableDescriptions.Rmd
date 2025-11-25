@@ -36,18 +36,18 @@ checkTrends <- function(p, LME_Slope, SufficientData){
 }
 
 # Import coral overall stats
-coral_pc_lme <- fread("../../../SEACAR_Trend_Analyses/coral/output/PercentCover/Coral_PC_LME_Stats.txt") %>% distinct() %>%
+coral_pc_lme <- fread("../../SEACAR_Trend_Analyses/coral/output/PercentCover/Coral_PC_LME_Stats.txt") %>% distinct() %>%
   rowwise() %>% 
   mutate(StatisticalTrend = checkTrends(p = LME_p, LME_Slope = LME_Slope, 
                                         SufficientData = SufficientData)) %>% 
   as.data.table()
-coral_sr <- fread("../../../SEACAR_Trend_Analyses/coral/output/SpeciesRichness/Coral_SpeciesRichness_MA_Overall_Stats.txt") %>% distinct()
+coral_sr <- fread("../../SEACAR_Trend_Analyses/coral/output/SpeciesRichness/Coral_SpeciesRichness_MA_Overall_Stats.txt") %>% distinct()
 
 # Create Period of Record column
 # coral <- coral[, `:=` (Period = paste0(EarliestYear, " - ", LatestYear))]
 
 # Import WebsiteParameters.csv
-websiteParams <- fread("data/WebsiteParameters.csv")
+websiteParams <- SEACAR::WebsiteParameters
 
 ```
 

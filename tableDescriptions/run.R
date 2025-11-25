@@ -1,42 +1,42 @@
+# As of 11/25/2025, the table descriptions are generated within each individual habitat analysis.
+# The outputs of these "*_tableDescriptions.csv" are parsed together with this script.
+# The code original from "*_TableDescriptions.Rmd" is now maintained within the SEACAR-DEV package.
+
 library(rstudioapi)
 library(knitr)
 library(openxlsx)
+library(data.table)
+library(dplyr)
 knitr::opts_chunk$set(warning = FALSE, echo = FALSE, message = FALSE)
 
 wd <- dirname(getActiveDocumentContext()$path)
 setwd(wd)
 
-# The lines below render the individual reports and provide an output file
-rmarkdown::render("SAV_TableDescriptions.Rmd")
-rmarkdown::render("WC_Discrete_TableDescriptions.Rmd")
-rmarkdown::render("WC_Continuous_TableDescriptions.Rmd")
-rmarkdown::render("WC_Nekton_TableDescriptions.Rmd")
-rmarkdown::render("Coral_TableDescriptions.Rmd")
-rmarkdown::render("CW_TableDescriptions.Rmd")
-rmarkdown::render("Oyster_TableDescriptions.Rmd")
+# Read in all relevant habitat outputs from their respective folders
+cw <- fread("../../SEACAR_Trend_Analyses/Coastal_Wetlands/output/cw_tableDescriptions.csv")
+coral <- fread("../../SEACAR_Trend_Analyses/Coral/output/coral_tableDescriptions.csv")
+nekton <- fread("../../SEACAR_Trend_Analyses/Nekton/output/nekton_tableDescriptions.csv")
+oyster <- fread("../../SEACAR_Trend_Analyses/Oyster/output/oyster_tableDescriptions.csv")
+sav <- fread("../../SEACAR_Trend_Analyses/SAV/output/sav_tableDescriptions.csv")
+wq <- fread("../../SEACAR_Trend_Analyses/WQ_Cont_Discrete/output/WQ_tableDescriptions.csv")
 
-# That output file is then loaded to produce these combined reports
-descTable <- setDT(read.xlsx(paste0("output/Atlas_Descriptions_", 
-                                    gsub("_","-",(Sys.Date())), ".xlsx")))
+descTable <- rbind(cw, coral, nekton, oyster, sav, wq)
 
 # Ensure that "None" entries in "SamplingFrequency" column are rendered as NA in final output
 descTable$SamplingFrequency[descTable$SamplingFrequency=="None"] <- NA
 
-# Add ParameterVisId values in case they are needed for Atlas deployment
-figCaps <- openxlsx::read.xlsx("data/AtlasFigureCaptions_Final.xlsx") %>%
-  select(-c("Website", "FigureCaptions"))
-figCaps$IndicatorName[figCaps$IndicatorName=="Percent Cover" & 
-                        figCaps$HabitatName=="Submerged Aquatic Vegetation"] <- "Percent Cover (by species)"
+websiteParams <- SEACAR::WebsiteParameters %>% 
+  select(HabitatName, IndicatorName, ParameterName, SamplingFrequency, ParameterVisId)
+
+websiteParams$IndicatorName[websiteParams$IndicatorName=="Percent Cover" & 
+                              websiteParams$HabitatName=="Submerged Aquatic Vegetation"] <- "Percent Cover (by species)"
 
 # Combine ParameterVisId into final output file
-descTable <- merge(descTable, figCaps, all.x = T)
+descTable <- merge(descTable, websiteParams, all.x = T)
 
 # Add MA AreaID into final output file
-MA_All <- fread("data/ManagedArea.csv")
-# Temporary re-naming of Southeast Florida Coral Reef Ecosystem Conservation Area & St. Andrews
-descTable$ManagedAreaName[descTable$ManagedAreaName=="Southeast Florida Coral Reef Ecosystem Conservation Area"] <- "Kristin Jacobs Coral Aquatic Preserve"
-descTable$ManagedAreaName[descTable$ManagedAreaName=="St. Andrews State Park Aquatic Preserve"] <- "St. Andrews Aquatic Preserve"
-
+MA_All <- SEACAR::ManagedAreas
+# Add AreaID into final exports
 descTable <- merge(MA_All[, c("ManagedAreaName", "AreaID")], descTable, by = "ManagedAreaName", all.y = T)
 
 # Export output file
@@ -46,7 +46,7 @@ write.xlsx(descTable,
            asTable = T)
 
 # Import WebsiteParameters.csv
-websiteParams <- fread("data/WebsiteParameters.csv")
+websiteParams <- SEACAR::WebsiteParameters
 # Correct order of websiteParams to match format from the Atlas
 websiteParams <- websiteParams %>% 
   arrange(factor(IndicatorName, levels = c("Nutrients","Water Quality","Water Clarity")),
@@ -57,4 +57,5 @@ websiteParams <- websiteParams %>%
   filter(Website==1)
 setDT(websiteParams)
 
+# main.Rmd renders a word document containing a selection of table descriptions
 rmarkdown::render("main.Rmd", output_file = paste0("output/allTableDescriptions_", Sys.Date(), ".docx"))
