@@ -14,41 +14,25 @@ library(tidyverse)
 library(glue)
 library(english)
 library(stringi)
+library(SEACAR)
 
 knitr::opts_chunk$set(echo = FALSE)
 # Discrete aggregate results (water clarity + nutrients)
-disc_results <- openxlsx::read.xlsx("output/WQ_agg_results.xlsx") %>% 
-  mutate(ManagedAreaName = case_when(ManagedAreaName == "Southeast Florida Coral Reef Ecosystem Conservation Area" ~ "Kristin Jacobs Coral Aquatic Preserve",
-                                     ManagedAreaName == "St. Andrews State Park Aquatic Preserve" ~ "St. Andrews Aquatic Preserve",
-                                     .default = ManagedAreaName)) %>%
-  as.data.table()
+disc_results <- openxlsx::read.xlsx("output/WQ_agg_results.xlsx") %>% as.data.table()
 # Individual discrete results for water quality
 disc_wq_trends <- fread("../../SEACAR_Trend_Analyses/WQ_Cont_Discrete/output/WQ_Discrete_All_KendallTau_Stats.csv") %>%
   filter(Website==1, ParameterName %in% c("Dissolved Oxygen"), !is.na(Trend))
-sav_results <- openxlsx::read.xlsx("output/all_SAV_MA_Results.xlsx") %>% 
-  mutate(ManagedAreaName = case_when(ManagedAreaName == "Southeast Florida Coral Reef Ecosystem Conservation Area" ~ "Kristin Jacobs Coral Aquatic Preserve",
-                                     ManagedAreaName == "St. Andrews State Park Aquatic Preserve" ~ "St. Andrews Aquatic Preserve",
-                                     .default = ManagedAreaName)) %>%
-  as.data.table()
+sav_results <- openxlsx::read.xlsx("output/all_SAV_MA_Results.xlsx") %>% as.data.table()
 
 nekton_results <- fread("../../SEACAR_Trend_Analyses/Nekton/output/Nekton_SpeciesRichness_MA_Overall_Stats.txt")
 nekton_results_byYear <- fread("../../SEACAR_Trend_Analyses/Nekton/output/Nekton_SpeciesRichness_MA_Yr_Stats.txt")
 cw_results <- fread("../../SEACAR_Trend_Analyses/Coastal_Wetlands/output/CoastalWetlands_SpeciesRichness_MA_Overall_Stats.txt")
 cw_results_byYear <- fread("../../SEACAR_Trend_Analyses/Coastal_Wetlands/output/CoastalWetlands_SpeciesRichness_MA_Yr_Stats.txt")
-coral_sr_results <- fread("../../SEACAR_Trend_Analyses/Coral/output/SpeciesRichness/Coral_SpeciesRichness_MA_Overall_Stats.txt") %>%
-  mutate(ManagedAreaName = case_when(ManagedAreaName == "Southeast Florida Coral Reef Ecosystem Conservation Area" ~ "Kristin Jacobs Coral Aquatic Preserve",
-                                     ManagedAreaName == "St. Andrews State Park Aquatic Preserve" ~ "St. Andrews Aquatic Preserve",
-                                     .default = ManagedAreaName)) %>%
+coral_sr_results <- fread("../../SEACAR_Trend_Analyses/Coral/output/SpeciesRichness/Coral_SpeciesRichness_MA_Overall_Stats.txt") %>% 
   as.data.table()
 coral_sr_results_byYear <- fread("../../SEACAR_Trend_Analyses/Coral/output/SpeciesRichness/Coral_SpeciesRichness_MA_Yr_Stats.txt") %>%
-  mutate(ManagedAreaName = case_when(ManagedAreaName == "Southeast Florida Coral Reef Ecosystem Conservation Area" ~ "Kristin Jacobs Coral Aquatic Preserve",
-                                     ManagedAreaName == "St. Andrews State Park Aquatic Preserve" ~ "St. Andrews Aquatic Preserve",
-                                     .default = ManagedAreaName)) %>%
   as.data.table()
 coral_pc_results <- fread("../../SEACAR_Trend_Analyses/Coral/output/PercentCover/Coral_PC_LME_Stats.txt") %>%
-  mutate(ManagedAreaName = case_when(ManagedAreaName == "Southeast Florida Coral Reef Ecosystem Conservation Area" ~ "Kristin Jacobs Coral Aquatic Preserve",
-                                     ManagedAreaName == "St. Andrews State Park Aquatic Preserve" ~ "St. Andrews Aquatic Preserve",
-                                     .default = ManagedAreaName)) %>%
   as.data.table()
 oyster_results <- fread("../../SEACAR_Trend_Analyses/Oyster/output/Oyster_All_GLMM_Stats.txt")
 oyster_results[ParameterName!="Shell Height" & SizeClass=="", ]$SizeClass <- NA
@@ -74,39 +58,17 @@ checkOyTrends <- function(modelEstimate, lowConfidence, upConfidence){
 oyster_results %<>% rowwise() %>%
   mutate(numericTrend = checkOyTrends(ModelEstimate, LowerConfidence, UpperConfidence)) %>%
   as.data.table()
-# Check and assign coral trends
-checkTrends <- function(p, LME_Slope, SufficientData){
-  if(SufficientData){
-    if(is.na(LME_Slope)){
-      return("Model did not fit the available data")
-    } else {
-      increasing <- LME_Slope > 0
-      trendPresent <- p <= 0.05
-      trendStatus <- "No significant trend"
-      if(trendPresent){
-        trendStatus <- ifelse(increasing, "Significantly increasing trend", 
-                              "Significantly decreasing trend")
-      }          
-    }
-  } else {
-    trendStatus <- "Insufficient data to calculate trend"
-  }
-  return(trendStatus)
-}
+# Check and assign coral trends via checkTrends function
+checkTrends <- SEACAR::checkTrends
 # Apply trend detection to coral results
 coral_pc_results <- coral_pc_results %>% rowwise() %>% 
-  mutate(Trend = checkTrends(p = LME_p, LME_Slope = LME_Slope, SufficientData = SufficientData)) %>%
+  mutate(Trend = checkTrends(p = LME_p, Slope = LME_Slope, SufficientData = SufficientData)) %>%
   as.data.table()
-disc_model_results <- fread("output/disc_model_results.csv") %>%
-  mutate(ManagedAreaName = case_when(ManagedAreaName == "Southeast Florida Coral Reef Ecosystem Conservation Area" ~ "Kristin Jacobs Coral Aquatic Preserve",
-                                     ManagedAreaName == "St. Andrews State Park Aquatic Preserve" ~ "St. Andrews Aquatic Preserve",
-                                     .default = ManagedAreaName)) %>%
-  as.data.table()
-MA_All <- fread("data/ManagedArea.csv")
+disc_model_results <- fread("output/disc_model_results.csv") %>% as.data.table()
+MA_All <- SEACAR::ManagedAreas
 
 ##### Acreage setup
-acreage <- openxlsx::read.xlsx("data/ChangeAnalysis_ChangeResultTable_2025.xlsx") %>%
-  as.data.table()
+acreage <- openxlsx::read.xlsx("data/ChangeAnalysis_ChangeResultTable_2025.xlsx") %>% as.data.table()
 
 generate_acreage_statement <- function(ma, habitat, acreage){
   ma_short <- MA_All[ManagedAreaName==ma, ShortName]
@@ -449,13 +411,6 @@ generate_coral_text <- function(ma, ind){
       n_species <- coral_sr_byYear[Year==most_recent_year, Max]
       sr_sentence <- glue("Monitoring in {most_recent_year} showed {n_species} grazers and reef dependent species in {ma_short}.")
       
-      # if(coral_sr$N_Years==1){
-      #   time_statement <- "1 year of data available"
-      # } else {
-      #   time_statement <- glue("{coral_sr$N_Years} years of data available from {coral_sr$EarliestYear} to {coral_sr$LatestYear}")
-      # }
-      # sr_sentence <- glue("With only {time_statement}, there was insufficient data to assess long-term species richness in {ma_short}.")  
-      
     } else {
       sr_sentence <- glue("Between {coral_sr$EarliestYear} and {coral_sr$LatestYear}, species richness surveys in {ma_short} showed an average of {round(coral_sr$Mean,2)} grazers and reef dependent species, with a maximum of {round(coral_sr$Max,2)} in {coral_sr$Year_MaxRichness} and a minimum of {round(coral_sr$Min,2)} in {coral_sr$Year_MinRichness}.")
     }
@@ -724,12 +679,7 @@ textResultsFinal <- merge(textResults,
                           by = "ManagedAreaName") %>%
   select(AreaID, Region, ManagedAreaName, Habitat, IndicatorName, Text, Trend)
 
-
-
-# Add adjustments to ensure proper MA name display in final output file
-textResultsFinal$ManagedAreaName[textResultsFinal$AreaID==12] <- "Kristin Jacobs Coral Aquatic Preserve"
-textResultsFinal$ManagedAreaName[textResultsFinal$AreaID==40] <- "St. Andrews Aquatic Preserve"
-
+# Add adjustments to ensure proper display in final output file
 textResultsFinal$SufficientData <- ifelse(str_detect(textResultsFinal$Text, "is needed|insufficient|Insufficient|not available|To Be Determined"), FALSE, TRUE)
 
 # Determine when to include which habitat

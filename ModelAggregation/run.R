@@ -10,5 +10,5 @@ source("disc_model_agg_bayesian_parallel.R")
 rmarkdown::render("TrendStatusGeneration.Rmd", 
                   output_file = paste0("output/TrendStatus_", Sys.Date(), ".docx"))
 
-# rmarkdown::render("TrendTemplate.Rmd",
-#                   output_file = paste0("output/TrendDisplay_", Sys.Date(), ".html"))
+### TrendTemplate.Rmd produces a preview .HTML with respective trend arrows in a similar format to the expected layout on the SEACAR Atlas.
+### It must be compiled directly using Knit -> Knit to HTML

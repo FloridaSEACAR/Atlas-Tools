@@ -1,8 +1,15 @@
+library(rstudioapi)
 library(lme4)
 library(nlme)
 library(glue)
 library(tidyverse)
 library(data.table)
+library(SEACAR)
+MA_All <- SEACAR::ManagedAreas
+
+# Set current working directory
+wd <- dirname(getActiveDocumentContext()$path)
+setwd(wd)
 
 ##### SAV Model aggregation overview #####
 ## Isolate MAs with Total Seagrass/Total SAV values.
@@ -16,14 +23,6 @@ sav <- openxlsx::read.xlsx("../../SEACAR_Trend_Analyses/SAV/output/website/SAV_B
 
 # All SAV managed areas
 managedareas <- unique(sav$ManagedAreaName)
-
-# Managed areas with Total SAV or Total Seagrass
-# total_ma <- sav %>% filter(Species %in% c("Total SAV", "Total seagrass"))
-# # Temp fix (too many entries for St Andrews due to name change [SAAP -> SBAP])
-# total_ma <- total_ma[1:28,]
-# sav_ma <- total_ma %>% filter(Species=="Total SAV")
-# seagrass_ma <- total_ma %>% filter(!ManagedAreaName %in% unique(sav_ma$ManagedAreaName))
-# total_ma_combined <- bind_rows(sav_ma, seagrass_ma)
 
 # Create subset of MAs with successful models
 ma_subset <- MA_All[ManagedAreaName %in% managedareas]
@@ -41,13 +40,18 @@ ma_halspp <- c("Banana River Aquatic Preserve", "Indian River-Malabar to Vero Be
 all_data <- data.frame()
 sav_results <- data.frame()
 for(ma in managedareas){
+  # abbreviated MA name
   ma_abrev <- MA_All[ManagedAreaName==ma, Abbreviation]
+  # locate models from a given MA
   ma_mods <- str_subset(sav_mod_locs, ma_abrev)
   ma_data <- data.frame()
   for(m in ma_mods){
     filename <- tail(str_split_1(m, "/"),1)
+    # Skip failed models; if they are listed in "failedmodslist"
     if(filename %in% failedmodslist$model) next
+    # Extract species name from model filename
     sp <- str_split_1(tail(str_split_1(filename, "_"),1), ".rds")[1]
+    # Exclude species in short_sp_to_exlcude
     if(sp %in% short_sp_to_exlcude) next
     mod <- readRDS(m)
     # Ensure that MAs with halophila species combined use the correct column
@@ -73,10 +77,11 @@ for(ma in managedareas){
     ma_data <- bind_rows(ma_data, temp_data)
   }
   # Only run model when there are >1 species available
+  # When only 1 species available, record results for that individual species
   if(length(unique(ma_data$analysisunit))<2){
     temp_ma <- sav %>% filter(ManagedAreaName==ma, 
                               Species %in% unique(ma_data$common_name))
-    
+    # Compile results
     ma_model_results <- data.frame(
       "ManagedAreaName" = ma,
       "Intercept" = temp_ma$LME_Intercept,
@@ -97,7 +102,7 @@ for(ma in managedareas){
                                data = ma_data),
                      silent = TRUE)
   species_included <- paste(unique(ma_data$common_name), collapse = "|")
-  
+  # Collect necessary information from models which were successful
   if(class(try(model_fixed)) != "try-error"){
     ma_mod_results <- broom.mixed::tidy(model_fixed) %>% filter(effect == "fixed") %>% as.data.table()
     ma_model_results <- data.frame(
@@ -111,8 +116,10 @@ for(ma in managedareas){
     
     # Store model result overviews
     sav_results <- bind_rows(sav_results, ma_model_results)
+  # Account for models that failed
   } else if(!ma %in% unique(sav_results$ManagedAreaName)){
     avail_sp <- sav %>% filter(ManagedAreaName==ma) %>% pull(Species)
+    # Record results for either Total SAV or Total Seagrass (Total SAV prioritized over Total Seagrass)
     if(any(c("Total SAV", "Total Seagrass") %in% avail_sp)){
       if("Total SAV" %in% avail_sp){
         temp_ma <- sav %>% filter(ManagedAreaName==ma, Species=="Total SAV")
@@ -128,6 +135,7 @@ for(ma in managedareas){
         "SpIncluded" = unique(temp_ma$Species)
       ) 
     } else {
+      # Return NULL results if model failed and neither Total SAV or Total Seagrass were available
       ma_model_results <- data.frame(
         "ManagedAreaName" = ma,
         "Intercept" = NA,
@@ -144,28 +152,11 @@ for(ma in managedareas){
   
   # Store all data for each MA
   all_data <- bind_rows(all_data, ma_data)
-  
-  # Extract results and compile
-  # model_summary <- summary(model_fixed)
-  # ma_model_results <- data.frame(
-  #   "ManagedAreaName" = ma,
-  #   "Intercept" = coef(model_fixed)["(Intercept)"],
-  #   "Slope" = coef(model_fixed)["relyear"],
-  #   "p" = round(model_summary$coefficients["relyear", "Pr(>|t|)"],6),
-  #   "Source" = "aggregate"
-  # )
 
 }
-
+# Determine trend values for each result (1 = pos trend, -1 = neg trend, 0 = no trend)
 sav_results <- sav_results %>% rowwise() %>%
   mutate(Trend = ifelse(p<=0.05 & Slope>0, 1, ifelse(p<=0.05 & Slope<0, -1, 0)))
-
-# total_ma_combined2 <- total_ma_combined %>% 
-#   select(ManagedAreaName, LME_Intercept, LME_Slope, p, StatisticalTrend, Species) %>% 
-#   rename("Intercept" = "LME_Intercept", "Slope" = "LME_Slope", "Trend" = "StatisticalTrend", "Source" = "Species") %>%
-#   mutate(Trend = ifelse(Trend=="Significantly decreasing trend", -1, ifelse(Trend=="Significantly increasing trend", 1, 0)))
-# 
-# all_sav_results <- bind_rows(sav_results, total_ma_combined2)
 
 # Add additional info which may be used in indicator summaries text
 extra_info <- sav %>% 
@@ -175,9 +166,9 @@ extra_info <- sav %>%
             N_Programs = max(N_Programs),
             minYear = min(EarliestYear),
             maxYear = max(LatestYear))
-# openxlsx::write.xlsx(sav_results, file = "SAV_MA_Results.xlsx", asTable = T)
+
+# Merge extra info into sav_results and write to file (used as input in TrendStatusGeneration.Rmd)
 openxlsx::write.xlsx(merge(sav_results, extra_info), file = "output/all_SAV_MA_Results.xlsx", asTable = T)
-# openxlsx::write.xlsx(all_sav_results, file = "output/all_SAV_MA_Results.xlsx", asTable = T)
 
 # Create visualizations of aggregate results, overlaid on previous simplified sav plots
 simple_plots <- list.files("../../SEACAR_Trend_Analyses/SAV/output/Figures/BB/", pattern = "trendplot", full.names=T)
@@ -193,14 +184,6 @@ for(ma in sav_results$ManagedAreaName){
     geom_abline(aes(linewidth = subset$Source, intercept = subset$Intercept, 
                     slope = subset$Slope), color = "blue") +
     labs(linewidth = "model source")
-  ggsave(filename = paste0("output/agg_model_", ma_abrev, ".png"), plot, height = 10, width = 10)
+  ggsave(filename = paste0("output/sav_plots/agg_model_", ma_abrev, ".png"), plot, height = 10, width = 10)
   all_plots[[ma]] <- plot
 }
-
-# plot <- ggplot(data, aes(x = relyear, y = BB_pct)) +
-#   geom_point(alpha = 0.3) +
-#   geom_smooth(aes(color = "aggregate"), method = "lm", formula = y ~ x, se = TRUE) +
-#   labs(title = glue("Seagrass Cover Trend Over Time in {ma}"),
-#        x = "Year",
-#        y = "Median Percent Cover") +
-#   scale_color_manual(values = c("aggregate" = "blue"))
