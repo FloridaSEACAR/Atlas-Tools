@@ -6,6 +6,7 @@ library(ggridges)
 library(glue)
 library(tidyverse)
 library(future.apply)
+library(cmdstanr)
 
 # Read in discrete kendall tau results
 disc <- fread("../../SEACAR_Trend_Analyses/WQ_Cont_Discrete/output/WQ_Discrete_All_KendallTau_Stats.txt", sep='|') %>%
@@ -57,7 +58,8 @@ fit_bayes_model <- function(row){
       data = subset,
       iter = 6000, warmup = 1000, chains = 4, cores = 4, threads = threading(3),
       control = list(adapt_delta = 0.999, max_treedepth = 20),
-      file = fileName
+      file = fileName,
+      backend = "cmdstanr"
     )
   } else {
     b_mod <- readRDS(paste0(fileName, ".rds"))

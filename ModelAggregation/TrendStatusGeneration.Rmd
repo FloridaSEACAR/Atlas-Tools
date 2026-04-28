@@ -34,7 +34,7 @@ coral_sr_results_byYear <- fread("../../SEACAR_Trend_Analyses/Coral/output/Speci
   as.data.table()
 coral_pc_results <- fread("../../SEACAR_Trend_Analyses/Coral/output/PercentCover/Coral_PC_LME_Stats.txt") %>%
   as.data.table()
-oyster_results <- fread("../../SEACAR_Trend_Analyses/Oyster/output/Oyster_All_GLMM_Stats.txt")
+oyster_results <- fread("../../SEACAR_Trend_Analyses/Oyster/output/ManagedAreaName/Oyster_All_GLMM_Stats.txt")
 oyster_results[ParameterName!="Shell Height" & SizeClass=="", ]$SizeClass <- NA
 # Function to check and assign oyster trends
 checkOyTrends <- function(modelEstimate, lowConfidence, upConfidence){
@@ -245,6 +245,7 @@ generate_discWQ_text <- function(data = disc_wq_trends, ma){
   subset <- data %>% filter(ManagedAreaName==ma)
   if(nrow(subset)==0){
     sentence <- glue("Data for water quality is needed for {ma_short}.")
+    numericTrend <- NA
   } else {
     minYear <- subset$EarliestYear
     maxYear <- subset$LatestYear
@@ -585,7 +586,7 @@ for(ma in unique(MA_All$ManagedAreaName)){
   cat("  \n")
   cat("### Coastal Wetlands Acreage")
   cat("  \n")
-  cat(cw_acre_statement)
+  cat(cw_acre_text)
   cat("  \n")
   textResults <- store_result(textResults, "Coastal Wetlands", "Acreage (by habitat)", ma, cw_acre_text, cw_acre_trend)
   
@@ -666,7 +667,7 @@ for(ma in unique(MA_All$ManagedAreaName)){
   cat("  \n")
   cat("### Oyster Acreage")
   cat("  \n")
-  cat(oy_acre_statement)
+  cat(oy_acre_text)
   cat("  \n")
   textResults <- store_result(textResults, "Oyster/Oyster Reef", "Acreage", ma, oy_acre_text, oy_acre_trend)
 }

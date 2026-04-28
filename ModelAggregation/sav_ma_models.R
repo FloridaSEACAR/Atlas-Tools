@@ -19,10 +19,10 @@ setwd(wd)
 ## 4.) If more than 1 species remains, run the model aggregation below.
 
 # Read in stats outputs
-sav <- openxlsx::read.xlsx("../../SEACAR_Trend_Analyses/SAV/output/website/SAV_BBpct_LMEresults_All.xlsx") %>% distinct()
+sav <- openxlsx::read.xlsx("../../SEACAR_Trend_Analyses/SAV/output/website/SAV_BBpct_LMEresults_All.xlsx") %>% distinct() %>% as.data.table()
 
 # All SAV managed areas
-managedareas <- unique(sav$ManagedAreaName)
+managedareas <- sav[SufficientData==TRUE, unique(ManagedAreaName)]
 
 # Create subset of MAs with successful models
 ma_subset <- MA_All[ManagedAreaName %in% managedareas]
