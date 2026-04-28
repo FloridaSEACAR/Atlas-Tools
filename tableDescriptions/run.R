@@ -7,10 +7,8 @@ library(knitr)
 library(openxlsx)
 library(data.table)
 library(dplyr)
-knitr::opts_chunk$set(warning = FALSE, echo = FALSE, message = FALSE)
 
-wd <- dirname(getActiveDocumentContext()$path)
-setwd(wd)
+setwd(this.path::here())
 
 # Read in all relevant habitat outputs from their respective folders
 cw <- fread("../../SEACAR_Trend_Analyses/Coastal_Wetlands/output/cw_tableDescriptions.csv")
@@ -25,11 +23,8 @@ descTable <- rbind(cw, coral, nekton, oyster, sav, wq)
 # Ensure that "None" entries in "SamplingFrequency" column are rendered as NA in final output
 descTable$SamplingFrequency[descTable$SamplingFrequency=="None"] <- NA
 
-websiteParams <- SEACAR::WebsiteParameters %>% 
+websiteParams <- SEACAR::WebsiteParameters %>% filter(Website==1) %>%
   select(HabitatName, IndicatorName, ParameterName, SamplingFrequency, ParameterVisId)
-
-websiteParams$IndicatorName[websiteParams$IndicatorName=="Percent Cover" & 
-                              websiteParams$HabitatName=="Submerged Aquatic Vegetation"] <- "Percent Cover (by species)"
 
 # Combine ParameterVisId into final output file
 descTable <- merge(descTable, websiteParams, all.x = T)
@@ -47,6 +42,8 @@ write.xlsx(descTable,
 
 # Import WebsiteParameters.csv
 websiteParams <- SEACAR::WebsiteParameters
+websiteParams$IndicatorName[websiteParams$IndicatorName=="Percent Cover" & 
+                              websiteParams$HabitatName=="Submerged Aquatic Vegetation"] <- "Percent Cover (by species)"
 # Correct order of websiteParams to match format from the Atlas
 websiteParams <- websiteParams %>% 
   arrange(factor(IndicatorName, levels = c("Nutrients","Water Quality","Water Clarity")),

@@ -18,9 +18,9 @@ knitr::opts_chunk$set(warning = FALSE, echo = FALSE, message = FALSE)
 for(ma in c("Alligator Harbor Aquatic Preserve","Apalachicola Bay Aquatic Preserve",
             "Big Bend Seagrasses Aquatic Preserve", "Pinellas County Aquatic Preserve", 
             "Southeast Florida Coral Reef Ecosystem Conservation Area")){
-  in_nekton <- ma %in% unique(all_nekton_trends$ManagedAreaName)
-  in_coral <- ma %in% all_coral_trends
-  in_sav <- ma %in% unique(sav_lme$ManagedAreaName)
+  in_nekton <- ma %in% unique(nekton$ManagedAreaName)
+  in_coral <- ma %in% unique(coral$ManagedAreaName)
+  in_sav <- ma %in% unique(sav$ManagedAreaName)
   in_cw <- ma %in% unique(cw$ManagedAreaName)
   in_oyster <- ma %in% unique(oyster$ManagedAreaName)
   
@@ -50,20 +50,20 @@ for(ma in c("Alligator Harbor Aquatic Preserve","Apalachicola Bay Aquatic Preser
         
         if(indicator %in% c("Water Quality", "Water Clarity", "Nekton")){
           if(indicator=="Nekton"){
-            descText <- descTable[ManagedAreaName==ma & IndicatorName == "Nekton", Description]
+            descText <- descTable[ManagedAreaName==ma & IndicatorName == "Nekton", DescriptionLatex]
             cat(glue("#### {parameter}"))
           } else {
-            descText <- descTable[ManagedAreaName==ma & ParameterName==parameter & IndicatorName == indicator & SamplingFrequency == type, Description]
+            descText <- descTable[ManagedAreaName==ma & ParameterName==parameter & IndicatorName == indicator & SamplingFrequency == type, DescriptionLatex]
             cat(glue("#### {parameter} - {type}"))
           }
         } else if(habitat=="Submerged Aquatic Vegetation" & indicator=="Percent Cover"){
-          descText <- descTable[ManagedAreaName==ma & HabitatName==habitat, Description]
+          descText <- descTable[ManagedAreaName==ma & HabitatName==habitat, DescriptionLatex]
           cat(glue("#### {parameter}"))
         } else if(habitat=="Coral/Coral Reef") {
-          descText <- descTable[ManagedAreaName==ma & ParameterName==parameter & IndicatorName == indicator, Description]
+          descText <- descTable[ManagedAreaName==ma & ParameterName==parameter & IndicatorName == indicator, DescriptionLatex]
           cat(glue("#### {parameter}"))
         } else {
-          descText <- descTable[ManagedAreaName==ma & ParameterName==parameter, Description]
+          descText <- descTable[ManagedAreaName==ma & ParameterName==parameter, DescriptionLatex]
           cat(glue("#### {parameter}"))
         }
         cat("  \n")
