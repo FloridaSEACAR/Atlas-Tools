@@ -35,7 +35,7 @@ apply_icons <- function(trend){
   if(trend==2){
     "data/icons/insuff-data.png"
   } else if(trend==3){
-    "data/icons/notrend verylow icon.png"
+    "data/icons/no-analysis-medium-icon.png"
   } else if(trend==1){
     "data/icons/increase-medium-icon.png"
   } else if(trend==-1){
